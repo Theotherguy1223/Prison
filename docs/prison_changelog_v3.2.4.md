@@ -1,13 +1,14 @@
-[Prison Documents - Table of Contents](docs/prison_docs_000_toc.md)
+[Prison Documents - Table of Contents](prison_docs_000_toc.md)
 
-## Prison Build Logs for v3.2.x
+## Prison Build Logs for v3.2.4 - 2021-03-01
 
 ## Build logs
- - **[v3.2.4-alpha - Current](changelog_v3.2.x.md)**
- - [v3.2.0 - 2019-12-03](docs/prison_changelog_v3.2.0.md)&nbsp;&nbsp;
-[v3.2.1 - 2020-09-27](docs/prison_changelog_v3.2.1.md)&nbsp;&nbsp;
-[v3.2.2 - 2020-11-21](docs/prison_changelog_v3.2.2.md)&nbsp;&nbsp;
-[v3.2.3 - 2020-12-25](docs/prison_changelog_v3.2.3.md)
+ - **[v3.2.5-alpha - Current](changelog_v3.2.x.md)**
+ - **[v3.2.0 - 2019-12-03](prison_changelog_v3.2.0.md)**&nbsp;&nbsp;
+**[v3.2.1 - 2020-09-27](prison_changelog_v3.2.1.md)**&nbsp;&nbsp;
+**[v3.2.2 - 2020-11-21](prison_changelog_v3.2.2.md)**&nbsp;&nbsp;
+**[v3.2.3 - 2020-12-25](prison_changelog_v3.2.3.md)**&nbsp;&nbsp;
+**[v3.2.4 - 2021-03-01](prison_changelog_v3.2.4.md)**
  
 
 Greetings!  I'm delighted that you are interested in the build logs for the
@@ -16,7 +17,64 @@ is going on in each build so you have a better idea if it may be something
 that you need.
 
 
-# v3.2.4-alpha.15 2021-02-27
+
+
+# V3.2.4 2021-03-01 
+Release of next bug update.
+
+
+
+* **Backpacks default size editable**
+  It's now possible to edit the backpacks default size from the backpacksconfig.yml that will 
+  be set for each new player when joining the server.
+
+* **v3.2.4-alpha.17 2021-03-01**
+
+
+* **Added support in Mine BlockEvents for the new placeholders `{msg}` and `{broadcast}`**
+which runs the commands `/prison utils msg {player}` and `/prison utils broadcast`.
+
+
+* **Added support for prison utils messages.**
+Provides an easy way to send messages to a specific player or to all players. To be used in scripts and within prison commands such as block events or rank commands.
+
+
+* **More tweaks to get the block counts updated when the server starts up so they will be accurate and won't need to wait until the next reset.**
+
+
+* **Restructuring of some of the handling of block names prior to processing the block events (block break or explosions) to preserve the original block names.**
+This is important too, since if the block name is AIR, it is understood that it could not have been broken with a standard BlockBreakEvent.  The explosion events appear to never eliminate AIR blocks, but prior processing before passing to those points of execution, the AIR blocks were filtered out.  So in general, they should never be AIR, but they could be tied back to the original block names too.  But with explosions, one has to be very careful since erroneous AIR blocks can get counted multiple times and hence throw off the actual counts for the mines.
+
+* **Fixed issue with the logic. Need slight different groupings.**
+
+
+* **v3.2.4-alpha.16 2021-02-28**
+
+
+* **Fixed a bug with calculating the fortune above level 5 where the random number was not being multiplied by 100.**
+This now works.
+
+
+* **Added totals to the block list along with the block remaining counts.**
+Hooked up the block counts to the mines.  Still having issues with accurate counts on the explosions.
+
+
+* **Start to hook up block counts for mines.**
+
+
+* **Hook up auto manager to CrazyEnchant explosions.**
+Also reworked how auto manager auto pickup deals with explosions and block counts.  They are more accurate now.  Plus they now support reporting the block names so that can be added as a new filter type in the future.  Monitor has been changed to only support mine resets.
+
+
+* **Some tweaks to get the CrazyEnchants explosions to work correctly.**
+
+
+* **Change how blockevents fire for explosions.**  They now fire when the blocks are broken, instead of at the monitor event time.  The reason for this shift for explosions is due to the fact that it is impossible to tell what blocks were just exploded at the monitor event since the block list can contain air to begin with.
+Also modified the MineBlockEvent class to provide an isFireEvent function that will perform the check on chance, event type, block name, and triggered (for TE Explosions).
+
+
+* **Rough start of spatial indexing.**
+The purpose of a spatial index is not so much for within a mine, but to help identify if a location is within a mine.  At this time, each mine will need to be checked one at a time, blindly, to see if a location is within a mine, and it may not be. The basic server may have about 30 mines, but a larger, more complex server, may have 40+ mines.  Use of a spatial index will return one or two mines near the point in question, so it will cut down on the amount of blind checks.
 
 
 * **Fixes crazy enchant's explosion event to work with normal drops.**
@@ -24,7 +82,6 @@ that you need.
 
 * **Moved the PlayerArmorStandManipulateEvent to the correct class.**
 Found it in AutoManager when auto manager has nothing to do with armor stands (hopefully).
-
 
 * **Change how Crazy Enchant explosions work.** 
 Using the same new techniques that TokenEnchant is using to ensure that the blocks are within the mines.  I do not have a copy of CrazyEnchant so I cannot test it.

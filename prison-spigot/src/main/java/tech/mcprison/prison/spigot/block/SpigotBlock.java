@@ -23,6 +23,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.cryptomorin.xseries.XMaterial;
+
 import tech.mcprison.prison.PrisonAPI;
 import tech.mcprison.prison.integration.CustomBlockIntegration;
 import tech.mcprison.prison.internal.ItemStack;
@@ -58,7 +60,22 @@ public class SpigotBlock implements Block {
         
         this.prisonBlockTypes = new HashSet<>();
     }
+    
+    @Override
+    public String toString() {
+    	StringBuilder sb = new StringBuilder();
+    	
+    	sb.append( getPrisonBlock().getBlockName() ).append( " " )
+    			.append( getLocation().toCoordinates() );
+    	
+    	
+    	return sb.toString();
+    }
 
+    public String getBlockName() {
+    	return getPrisonBlock().getBlockName();
+    }
+    
     @Override public Location getLocation() {
         return SpigotUtil.bukkitLocationToPrison(bBlock.getLocation());
     }
@@ -134,7 +151,12 @@ public class SpigotBlock implements Block {
 		this.prisonBlockTypes = prisonBlockTypes;
 	}
 
-	public void setPrisonBlock( PrisonBlock prisonBlock ) {
+    public void setPrisonBlock( XMaterial xMat ) {
+    	setPrisonBlock( SpigotUtil.getPrisonBlock( xMat.name() ) );
+		
+	}
+
+    public void setPrisonBlock( PrisonBlock prisonBlock ) {
     	
     	switch ( prisonBlock.getBlockType() )
 		{

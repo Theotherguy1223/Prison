@@ -441,10 +441,9 @@ public class MinesCommands
 //        	return;
 //        }
         
-        boolean useNewBlockModel = Prison.get().getPlatform().getConfigBooleanFalse( "use-new-prison-block-model" );
 
         
-        if ( useNewBlockModel ) {
+        if ( m.isUseNewBlockModel() ) {
         	
         	block = block == null ? null : block.trim().toLowerCase();
         	PrisonBlock prisonBlock = null;
@@ -525,7 +524,7 @@ public class MinesCommands
         		.withReplacements(block, mineName).sendTo(sender);
         }
 
-        getBlocksList(m, null, useNewBlockModel).send(sender);
+        getBlocksList(m, null, true ).send(sender);
 
         //pMines.getMineManager().clearCache();
     }
@@ -609,9 +608,8 @@ public class MinesCommands
 //        	return;
 //        }
         
-        boolean useNewBlockModel = Prison.get().getPlatform().getConfigBooleanFalse( "use-new-prison-block-model" );
 
-        if ( useNewBlockModel ) {
+        if ( m.isUseNewBlockModel() ) {
         
         	
         	block = block == null ? null : block.trim().toLowerCase();
@@ -731,7 +729,7 @@ public class MinesCommands
         }
         
         
-        getBlocksList(m, null, useNewBlockModel ).send(sender);
+        getBlocksList(m, null, true ).send(sender);
 
         //pMines.getMineManager().clearCache();
 
@@ -826,9 +824,8 @@ public class MinesCommands
         PrisonMines pMines = PrisonMines.getInstance();
         Mine m = pMines.getMine(mineName);
         
-        boolean useNewBlockModel = Prison.get().getPlatform().getConfigBooleanFalse( "use-new-prison-block-model" );
         
-        if ( useNewBlockModel ) {
+        if ( m.isUseNewBlockModel() ) {
         
         	
         	block = block == null ? null : block.trim().toLowerCase();
@@ -873,7 +870,7 @@ public class MinesCommands
         	deleteBlock( sender, pMines, m, blockType );
         }
         
-        getBlocksList(m, null, useNewBlockModel).send(sender);
+        getBlocksList(m, null, true).send(sender);
     }
 
     /**
@@ -1110,23 +1107,34 @@ public class MinesCommands
         PrisonMines pMines = PrisonMines.getInstance();
         Mine m = pMines.getMine(mineName);
         
+        DecimalFormat dFmt = new DecimalFormat("#,##0");
+        DecimalFormat fFmt = new DecimalFormat("#,##0.00");
+        
         
         ChatDisplay chatDisplay = new ChatDisplay("&bMine: &3" + m.getName());
 
+      	
+      	if ( !m.isVirtual() ) {
+      		RowComponent row = new RowComponent();
+      		row.addTextComponent( "&3Blocks Remaining: &7%s  %s%% ",
+      				dFmt.format( m.getRemainingBlockCount() ), 
+      				fFmt.format( m.getPercentRemainingBlockCount() ) );
+      		
+      		chatDisplay.addComponent( row );
+      	}
         
-        boolean useNewBlockModel = Prison.get().getPlatform().getConfigBooleanFalse( "use-new-prison-block-model" );
-        
-        int blockSize = 0;
+
+      	int blockSize = 0;
 
 
         chatDisplay.addText("&3Blocks:");
         chatDisplay.addText("&8Click on a block's name to edit its chances of appearing.%s",
-        		(useNewBlockModel ? ".." : ""));
+        		(m.isUseNewBlockModel() ? ".." : ""));
         
-        BulletedListComponent list = getBlocksList(m, null, useNewBlockModel );
+        BulletedListComponent list = getBlocksList(m, null, true );
         chatDisplay.addComponent(list);
 
-        if ( useNewBlockModel ) {
+        if ( m.isUseNewBlockModel() ) {
         	blockSize =  m.getPrisonBlocks().size();
         }
         else {
@@ -1210,12 +1218,10 @@ public class MinesCommands
         }
         
         
-    	boolean useNewBlockModel = Prison.get().getPlatform()
-    										.getConfigBooleanFalse( "use-new-prison-block-model" );
         
     	PrisonBlockStatusData block = null;
     	
-    	if ( useNewBlockModel ) {
+    	if ( m.isUseNewBlockModel() ) {
     		block = m.getPrisonBlock( blockName );
     	}
     	else {
@@ -1401,7 +1407,7 @@ public class MinesCommands
         CommandPagedData cmdPageData = null;
         
         
-        if ( Prison.get().getPlatform().getConfigBooleanFalse( "use-new-prison-block-model" ) ) {
+        if ( m.isUseNewBlockModel() ) {
         
         	cmdPageData = new CommandPagedData(
         			"/mines info " + m.getName(), m.getPrisonBlocks().size(),
@@ -1681,23 +1687,22 @@ public class MinesCommands
         	
         }
         
-        boolean useNewBlockModel = Prison.get().getPlatform().getConfigBooleanFalse( "use-new-prison-block-model" );
         
         int blockSize = 0;
         if ( cmdPageData.isShowAll() || cmdPageData.getCurPage() > 1 ) {
         	if ( cmdPageData.isDebug() ) {
         		chatDisplay.addText( "&7Block model: &3%s", 
-        				( useNewBlockModel ? "New" : "Old") );
+        				( m.isUseNewBlockModel() ? "New" : "Old") );
         	}
         	chatDisplay.addText("&3Blocks:");
         	chatDisplay.addText("&8Click on a block's name to edit its chances of appearing.%s",
-        			(useNewBlockModel ? ".." : ""));
+        			(m.isUseNewBlockModel() ? ".." : ""));
         	
-        	BulletedListComponent list = getBlocksList(m, cmdPageData, useNewBlockModel );
+        	BulletedListComponent list = getBlocksList(m, cmdPageData, true );
         	chatDisplay.addComponent(list);
         }
 
-        if ( useNewBlockModel ) {
+        if ( m.isUseNewBlockModel() ) {
         	blockSize =  m.getPrisonBlocks().size();
         }
         else {
@@ -1710,7 +1715,8 @@ public class MinesCommands
         chatDisplay.send(sender);
     }
 
-    private BulletedListComponent getBlocksList(Mine m, CommandPagedData cmdPageData, boolean useNewBlockModel) {
+    private BulletedListComponent getBlocksList(Mine m, CommandPagedData cmdPageData, 
+    							boolean includeTotals ) {
        
     	BulletedListComponent.BulletedListBuilder builder = new BulletedListComponent.BulletedListBuilder();
 
@@ -1719,11 +1725,15 @@ public class MinesCommands
         double totalChance = 0.0d;
         int count = 0;
         
-        if ( useNewBlockModel ) {
+        PrisonBlock totals = new PrisonBlock("Totals");
+        
+        if ( m.isUseNewBlockModel() ) {
 
         	for (PrisonBlock block : m.getPrisonBlocks()) {
         		double chance = Math.round(block.getChance() * 100.0d) / 100.0d;
         		totalChance += chance;
+        		
+        		totals.addStats( block );
         		
         		if ( cmdPageData == null ||
         				count++ >= cmdPageData.getPageStart() && count <= cmdPageData.getPageEnd() ) {
@@ -1733,13 +1743,15 @@ public class MinesCommands
         		}
         	}
         }
-        if ( !useNewBlockModel || 
-        		!useNewBlockModel && cmdPageData != null && cmdPageData.isDebug() ) {
+        if ( !m.isUseNewBlockModel() || 
+        		!m.isUseNewBlockModel() && cmdPageData != null && cmdPageData.isDebug() ) {
         	
         	for (BlockOld block : m.getBlocks()) {
         		double chance = Math.round(block.getChance() * 100.0d) / 100.0d;
         		totalChance += chance;
         		
+        		totals.addStats( block );
+
         		if ( cmdPageData == null ||
         				count++ >= cmdPageData.getPageStart() && count <= cmdPageData.getPageEnd() ) {
         			
@@ -1753,6 +1765,10 @@ public class MinesCommands
             builder.add("&e%s - Air", dFmt.format(100.0d - totalChance) + "%");
         }
 
+        if ( includeTotals ) {
+        	addBlockStats( m, totals, iFmt, dFmt, builder );
+        }
+        
         return builder.build();
     }
 
@@ -1763,39 +1779,53 @@ public class MinesCommands
 	{
 		RowComponent row = new RowComponent();
 		
-		String percent = dFmt.format(block.getChance()) + "%";
+		boolean totals = block.getBlockName().equalsIgnoreCase( "totals" );
 		
-		String text = String.format("&7%s - %s", 
-						percent, block.getBlockName());
-		// Minor padding after the name and chance:
-		if ( text.length() < 30 ) {
-			text += "                              ".substring( text.length() );
+		if ( totals ) {
+			String text = "                   &dTotals:  ";
+			row.addTextComponent( text );
 		}
-		FancyMessage msg = new FancyMessage(
-				text )
-				.suggest("/mines block set " + mine.getName() + " " + block.getBlockName() + " %")
-				.tooltip("&7Click to edit the block's chance.");
-		row.addFancy( msg );
+		else {
+			
+			String percent = dFmt.format(block.getChance()) + "%";
+			
+			String text = String.format("&7%s - %s", 
+					percent, block.getBlockName());
+			// Minor padding after the name and chance:
+			if ( text.length() < 30 ) {
+				text += "                              ".substring( text.length() );
+			}
+			FancyMessage msg = new FancyMessage(
+					text )
+					.suggest("/mines block set " + mine.getName() + " " + block.getBlockName() + " %")
+					.tooltip("&7Click to edit the block's chance.");
+			row.addFancy( msg );
+		}
 
-		String text1 = formatStringPadRight("  &3Pl: &7%s", 16, iFmt.format( block.getResetBlockCount() ));
+		String text1 = formatStringPadRight(
+				(totals ? "      &b%s" : "  &3Pl: &7%s"), 
+					16, iFmt.format( block.getResetBlockCount() ));
 		FancyMessage msg1 = new FancyMessage( text1 )
 								.tooltip("&7Number of blocks of this type &3Pl&7aced in this mine.");
 		row.addFancy( msg1 );
 		
-		String text2 = formatStringPadRight("  &3Rm: &7%s", 16, 
+		String text2 = formatStringPadRight(
+				(totals ? "    &b%s" : "  &3Rm: &7%s"), 16, 
 								iFmt.format( block.getResetBlockCount() - block.getBlockCountUnsaved() ));
 		FancyMessage msg2 = new FancyMessage( text2 )
 								.tooltip("&7Number of blocks of this type &3R&7e&3e&7aining.");
 		row.addFancy( msg2 );
 		
 		FancyMessage msg3 = new FancyMessage(
-				String.format("  &3T: &7%s", 
+				String.format(
+						(totals ? " &b%s" : "  &3T: &7%s"), 
 						PlaceholdersUtil.formattedKmbtSISize( 1.0d * block.getBlockCountTotal(), dFmt, "" )))
 				.tooltip("&3T&7otal blocks of this type that have been mined.");
 		row.addFancy( msg3 );
 		
 		FancyMessage msg4 = new FancyMessage(
-				String.format("  &3S: &7%s", 
+				String.format(
+						(totals ? "      &b%s" : "  &3S: &7%s"), 
 						PlaceholdersUtil.formattedKmbtSISize( 1.0d * block.getBlockCountTotal(), dFmt, "" )))
 				.tooltip("&7Blocks of this type that have been mined since the server was &3S&7tarted.");
 		row.addFancy( msg4 );
@@ -2442,7 +2472,7 @@ public class MinesCommands
     			Player player = getPlayer( sender );
     			Output.get().logInfo( "&7Mine &b%s Zero Block Reset Delay: &b%s &7set it to &b%s &7sec",
     					(player == null ? "console" : player.getDisplayName()), 
-    					m.getTag(), dFmt.format( resetTime )  );
+    					m, dFmt.format( resetTime )  );
     		}
     		catch ( NumberFormatException e ) {
     			Output.get().sendWarn( sender, 
@@ -2951,7 +2981,10 @@ public class MinesCommands
     		@Arg(name = "mineName", description = "The name of the mine") String mineName,
     		@Arg(name = "edge", description = "Edge to use [top, bottom, north, east, south, west, walls]", def = "walls") String edge, 
     		//@Arg(name = "adjustment", description = "How to adust the size [smaller, larger]", def = "larger") String adjustment,
-    		@Arg(name = "pattern", description = "pattern to use [?]", def = "bright") String pattern,
+    		@Arg(name = "pattern", description = "pattern to use. '?' for a list of all patterns. " +
+    				"'repair' will attempt to repair missing blocks outside of the liner. " +
+    				"'remove' will remove the liner from the mine. 'removeAll' removes alll liners. [?]", 
+    				def = "bright") String pattern,
     		@Arg(name = "force", description = "Force liner if air [force no]", def = "no") String force
     		
     		) {
@@ -2960,16 +2993,17 @@ public class MinesCommands
     		return;
     	}
     	
+    	if ( pattern != null && "?".equals( pattern ) || edge != null && "?".equals( edge )) {
+    		
+    		sender.sendMessage( "&cAvailable Edges: &3[&7top bottom north east south west walls&3]" );
+    		sender.sendMessage( "&3Available Patterns: [&7" + LinerPatterns.toStringAll() + "&3]" );
+    		return;
+    	}
+    	
     	Edges e = Edges.fromString( edge );
     	if ( e == null ) {
     		sender.sendMessage( "&cInvalid edge value. &3[&7top bottom north east south west walls&3]" );
     		return;
-    	}
-    	
-    	if ( pattern != null && "?".equals( pattern )) {
-    		sender.sendMessage( "&3Available Patterns: [&7" + 
-    				LinerPatterns.toStringAll() + "&3]" );
-    		
     	}
     	
     	LinerPatterns linerPattern = LinerPatterns.fromString( pattern );
@@ -2997,12 +3031,21 @@ public class MinesCommands
 //    		return;
 //    	}
     	
-    	mine.getLinerData().setLiner( e, linerPattern, isForced );
-    	
-    	new MineLinerBuilder( mine, e, linerPattern, isForced );
+    	if ( linerPattern == LinerPatterns.removeAll ) {
+    		
+    		mine.getLinerData().removeAll();
+    		sender.sendMessage( "&7All liners have been removed from mine " + mine.getName() );
+    	}
+    	else if ( linerPattern == LinerPatterns.remove ) {
+    		mine.getLinerData().remove( e );
+    		sender.sendMessage( "&7The liner for the " + e.name() + " has been removed from mine " + mine.getName() );
+    	}
+    	else {
+    		mine.getLinerData().setLiner( e, linerPattern, isForced );
+    		new MineLinerBuilder( mine, e, linerPattern, isForced );
+    	}
     	
     	pMines.getMineManager().saveMine( mine );
-    	
     }
     
     
@@ -3513,7 +3556,9 @@ public class MinesCommands
 	
 
 	@Command(identifier = "mines blockEvent add", description = "Adds a BlockBreak command to a mine. " +
-			"Can use placeholders {player} and {player_uid}. Use ; between multiple commands.", 
+			"To send messages use {msg} or {broadcast} followed by the formatted message. " +
+			"Can use placeholders {player} and {player_uid}. Use ; between multiple commands. " +
+			"Example: 'token give {player} 1;{msg} &7You got &31 &7token!;tpa a'", 
     		onlyPlayers = false, permissions = "mines.set")
     public void blockEventAdd(CommandSender sender, 
     			@Arg(name = "mineName") String mineName,

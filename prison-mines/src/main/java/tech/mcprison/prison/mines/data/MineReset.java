@@ -11,6 +11,7 @@ import tech.mcprison.prison.Prison;
 import tech.mcprison.prison.PrisonAPI;
 import tech.mcprison.prison.internal.Player;
 import tech.mcprison.prison.internal.World;
+import tech.mcprison.prison.internal.block.Block;
 import tech.mcprison.prison.internal.block.PrisonBlock;
 import tech.mcprison.prison.internal.block.PrisonBlockStatusData;
 import tech.mcprison.prison.mines.PrisonMines;
@@ -107,7 +108,7 @@ public abstract class MineReset
 	private long airCountElapsedTimeMs = 0L;
 	
 	
-	private int blockBreakCount = 0;
+//	private int blockBreakCount = 0;
 	
 	
 //	private boolean[] mineAirBlocksOriginal;
@@ -128,6 +129,8 @@ public abstract class MineReset
 	private long statsResetPageMs = 0;
 	
 	
+	private List<Long> statsUpdateBlockCountsTaskMs;
+	
 	public MineReset() {
 		super();
 		
@@ -136,6 +139,8 @@ public abstract class MineReset
 		this.mineTargetPrisonBlocks = new ArrayList<>();
 		this.mineTargetPrisonBlocksMap = new TreeMap<>();
 		
+		this.statsUpdateBlockCountsTaskMs = new ArrayList<>();
+
 		this.currentJob = null;
 		
 	}
@@ -223,8 +228,6 @@ public abstract class MineReset
 			
 			// Generate the target block list first:
 			
-			
-//			boolean useNewBlockModel = Prison.get().getPlatform().getConfigBooleanFalse( "use-new-prison-block-model" );
 			
 			// Output.get().logInfo( "MineRest.resetSynchonouslyInternal() " + getName() );
 
@@ -396,6 +399,7 @@ public abstract class MineReset
 //			// free up memory:
 //			getRandomizedBlocks().clear();
 			
+			incrementResetCount();
 			
 			if ( !getCurrentJob().getResetActions().contains( MineResetActions.NO_COMMANDS )) {
 				
@@ -628,9 +632,6 @@ public abstract class MineReset
 		
 		
 		
-        boolean useNewBlockModel = Prison.get().getPlatform().getConfigBooleanFalse( "use-new-prison-block-model" );
-
-		
 //		// Reset the mineAirBlocks to all false values:
 //		boolean[] mAirBlocks = new boolean[ getBounds().getTotalBlockCount() ];
 //		// Arrays.fill(  mAirBlocks, false ); // redundant but prevents nulls if were Boolean
@@ -648,12 +649,12 @@ public abstract class MineReset
 					
 //					MineTargetBlock mtb = null;
 					
-					if ( useNewBlockModel ) {
+					if ( isUseNewBlockModel() ) {
 						
 						PrisonBlock prisonBlock = randomlySelectPrisonBlock( random, currentLevel );
 						
 						// Increment the mine's block count. This block is one of the control blocks:
-						prisonBlock.incrementResetBlockCount();
+						incrementResetBlockCount( prisonBlock );
 						
 						addMineTargetPrisonBlock( prisonBlock, x, y, z );
 //						mtb = new MineTargetPrisonBlock( prisonBlock, x, y, z);
@@ -669,7 +670,7 @@ public abstract class MineReset
 						BlockOld tBlock = randomlySelectBlock( random, currentLevel );
 						
 						// Increment the mine's block count. This block is one of the control blocks:
-						tBlock.incrementResetBlockCount();
+						incrementResetBlockCount( tBlock );
 						
 						addMineTargetPrisonBlock( tBlock, x, y, z );
 //						mtb = new MineTargetBlock( tBlock.getType(), x, y, z);
@@ -963,9 +964,6 @@ public abstract class MineReset
 		else {
 			World world = getBounds().getCenter().getWorld();
 			
-	        boolean useNewBlockModel = Prison.get().getPlatform().getConfigBooleanFalse( "use-new-prison-block-model" );
-
-
 			
 			long start = System.currentTimeMillis();
 			
@@ -985,7 +983,7 @@ public abstract class MineReset
 				
 //				if (!isFillMode || isFillMode && targetBlock.getBlockAt().isEmpty()) {
 //				} 
-				if ( useNewBlockModel ) {
+				if ( isUseNewBlockModel() ) {
 //					MineTargetPrisonBlock pbTarget = (MineTargetPrisonBlock) target;
 					
 					targetBlock.getBlockAt().setPrisonBlock( (PrisonBlock) target.getPrisonBlock() );
@@ -1066,8 +1064,16 @@ public abstract class MineReset
     	}
     }
     
+//    protected void resetAirCountStartupAsyncTask() {
+//    	refreshAirCountAsyncTask( false );
+//    }
+    
     /**
      * <p>This function performs the air count and should be ran as an async task.
+     * </p>
+     * 
+     * <p>This also should be used to generate the targetBlockList to help identify
+     * unknown blocks when being processed.
      * </p>
      * 
      * <p>WARNING: This generates a ton of async failures upon startup or during other
@@ -1077,7 +1083,6 @@ public abstract class MineReset
      */
 	protected void refreshAirCountAsyncTask()
 	{
-    	boolean useNewBlockModel = Prison.get().getPlatform().getConfigBooleanFalse( "use-new-prison-block-model" );
     	
     	if ( isVirtual() ) {
     		// ignore:
@@ -1089,7 +1094,7 @@ public abstract class MineReset
 							"Ensure world exists. mine= %s ", 
 							getName()  ));
 		}
-		else if ( useNewBlockModel &&
+		else if ( isUseNewBlockModel() &&
 				getPrisonBlocks().size() == 1 && 
 				getPrisonBlocks().get( 0 ).equals( PrisonBlock.IGNORE ) ) {
 		
@@ -1099,7 +1104,7 @@ public abstract class MineReset
 			// not registered and tracked within prison, and hence will report incorrect errors.
 			setAirCount( 0 );
 		}
-		else if ( !useNewBlockModel &&
+		else if ( !isUseNewBlockModel() &&
 				getBlocks().size() == 1 && 
 				getBlocks().get( 0 ).getType() == BlockType.IGNORE ) {
 			
@@ -1115,6 +1120,11 @@ public abstract class MineReset
 			World world = worldOptional.get();
 			
 			
+			// Reset the target block lists:
+			clearMineTargetPrisonBlocks();
+			
+			
+			
 			int airCount = 0;
 			int errorCount = 0;
 			StringBuilder sb = new StringBuilder();
@@ -1125,17 +1135,30 @@ public abstract class MineReset
 						
 						try {
 							Location targetBlock = new Location(world, x, y, z);
+							Block tBlock = targetBlock.getBlockAt();
 							
-							if ( useNewBlockModel ) {
+							if ( isUseNewBlockModel() ) {
 								
-								if ( targetBlock.getBlockAt().getPrisonBlock() == null ||
-										targetBlock.getBlockAt().getPrisonBlock().equals( PrisonBlock.AIR ) ) {
+								PrisonBlock pBlock = tBlock.getPrisonBlock();
+
+								// Increment the mine's block count. This block is one of the control blocks:
+								addMineTargetPrisonBlock( incrementResetBlockCount( pBlock ), x, y, z );
+								
+								
+								if ( pBlock == null ||
+										pBlock.equals( PrisonBlock.AIR ) ) {
 									airCount++;
 								}
 							}
 							else {
 								
-								if ( targetBlock.getBlockAt().getType() == BlockType.AIR ) {
+								BlockOld oBlock = new BlockOld( tBlock.getType() );
+
+								// Increment the mine's block count. This block is one of the control blocks:
+								addMineTargetPrisonBlock( incrementResetBlockCount( oBlock ), x, y, z );
+								
+								
+								if ( tBlock.getType() == BlockType.AIR ) {
 									airCount++;
 								}
 							}
@@ -1186,6 +1209,55 @@ public abstract class MineReset
 		}
 		
 	}
+	
+	
+	/**
+	 * <p>This function should ONLY be used if an enchantment plugin is being used that cannot
+	 * provide a working explosion event to monitor, and the plugin is breaking more blocks than what
+	 * is being reported with the BlockBreakEvent.  
+	 * </p>
+	 * 
+	 * <p>This function ignores previously counted blocks, which is indicated with isAirBroke().
+	 * Since it only processes blocks that have not been identified as being broke, then whenever
+	 * it encounters an air block (block.isEmpty()) then it is understood that block was just 
+	 * broke and needs to be counted then the related targetBlock needs to be set as <b>air</b> and as
+	 * have been <b>broke</b>.
+	 * </p>
+	 */
+	public void updateBlockCountsTask() {
+		
+		World world = getBounds().getCenter().getWorld();
+		if ( world != null ) {
+
+			long start = System.currentTimeMillis();
+			
+			for ( MineTargetPrisonBlock targetBlock : getMineTargetPrisonBlocks() ) {
+				
+				if ( targetBlock != null && !targetBlock.isAirBroke() ) {
+					MineTargetBlockKey key = targetBlock.getBlockKey();
+					Location blockLocation = new Location( world, key.getX(), key.getY(), key.getZ() );
+					
+					Block block = world.getBlockAt( blockLocation );
+					if ( block.isEmpty() ) {
+						
+						targetBlock.getPrisonBlock().incrementMiningBlockCount();
+						targetBlock.setAirBroke( true );
+					}
+				}
+			}
+
+			long stop = System.currentTimeMillis();
+			long elapsed = start - stop;
+			
+			getStatsUpdateBlockCountsTaskMs().add( elapsed );
+			
+			if ( getStatsUpdateBlockCountsTaskMs().size() > 10 ) {
+				getStatsUpdateBlockCountsTaskMs().remove( 0 );
+			}
+		}
+		
+	}
+	
     
 	public int getRemainingBlockCount() {
 		int remainingBlocks = getBounds().getTotalBlockCount() - getBlockBreakCount();
@@ -1370,18 +1442,16 @@ public abstract class MineReset
 	
 	private void constraintsApplyMin() {
 		
-    	boolean useNewBlockModel = Prison.get().getPlatform().getConfigBooleanFalse( "use-new-prison-block-model" );
-
-    	if ( useNewBlockModel ) {
+    	if ( isUseNewBlockModel() ) {
     		
     		for ( PrisonBlockStatusData block : getPrisonBlocks() ) {
-    			constraintsApplyMin( block, useNewBlockModel );
+    			constraintsApplyMin( block, isUseNewBlockModel() );
     		}
     	}
     	else {
     		
     		for ( PrisonBlockStatusData block : getBlocks() ) {
-    			constraintsApplyMin( block, useNewBlockModel );
+    			constraintsApplyMin( block, isUseNewBlockModel() );
     		}
     	}
 	}
@@ -1577,6 +1647,38 @@ public abstract class MineReset
 		return mineTargetPrisonBlocksMap;
 	}
 	
+	public MineTargetPrisonBlock getTargetPrisonBlock( Block block ) {
+		
+		Location loc = block.getLocation();
+		MineTargetBlockKey key = new MineTargetBlockKey( loc );
+		
+		return getMineTargetPrisonBlocksMap().get( key );
+	}
+	
+	
+	
+//	public String getTargetPrisonBlockName( Block block ) {
+//		String results = "AIR";
+//		
+//		if ( block != null ) {
+//			PrisonBlock pBlock = block.getPrisonBlock();
+//			if ( pBlock != null ) {
+//				
+//				results = pBlock.getBlockName();
+//			}
+//			
+//			if ( "AIR".equalsIgnoreCase( results ) ) {
+//				MineTargetPrisonBlock targetBlock = getTargetPrisonBlock( block );
+//				
+//				if ( targetBlock != null ) {
+//					results = targetBlock.getPrisonBlock().getBlockName();
+//				}
+//			}
+//		}
+//		
+//		return results;
+//	}
+	
 
 //	public boolean[] getMineAirBlocksOriginal()
 //	{
@@ -1686,18 +1788,18 @@ public abstract class MineReset
 		this.airCountElapsedTimeMs = airCountElapsedTimeMs;
 	}
 
-	public int addBlockBreakCount( int blockCount ) {
-		return blockBreakCount += blockCount;
-	}
-	public int incrementBlockBreakCount() {
-		return ++blockBreakCount;
-	}
-	public int getBlockBreakCount() {
-		return blockBreakCount;
-	}
-	public void setBlockBreakCount( int blockBreakCount ) {
-		this.blockBreakCount = blockBreakCount;
-	}
+//	public int addBlockBreakCount( int blockCount ) {
+//		return blockBreakCount += blockCount;
+//	}
+//	public int incrementBlockBreakCount() {
+//		return ++blockBreakCount;
+//	}
+//	public int getBlockBreakCount() {
+//		return blockBreakCount;
+//	}
+//	public void setBlockBreakCount( int blockBreakCount ) {
+//		this.blockBreakCount = blockBreakCount;
+//	}
 
 	public long getStatsResetTimeMS()
 	{
@@ -1772,6 +1874,13 @@ public abstract class MineReset
 	}
 	public void setStatsResetPageMs( long statsResetPageMs ) {
 		this.statsResetPageMs = statsResetPageMs;
+	}
+
+	public List<Long> getStatsUpdateBlockCountsTaskMs() {
+		return statsUpdateBlockCountsTaskMs;
+	}
+	public void setStatsUpdateBlockCountsTaskMs( List<Long> statsUpdateBlockCountsTaskMs ) {
+		this.statsUpdateBlockCountsTaskMs = statsUpdateBlockCountsTaskMs;
 	}
     
 }

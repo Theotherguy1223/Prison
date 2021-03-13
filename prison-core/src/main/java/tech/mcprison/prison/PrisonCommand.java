@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.UUID;
 
+import tech.mcprison.prison.autofeatures.AutoFeaturesWrapper;
 import tech.mcprison.prison.autofeatures.AutoFeaturesFileConfig.AutoFeatures;
 import tech.mcprison.prison.commands.Arg;
 import tech.mcprison.prison.commands.Command;
@@ -208,30 +209,30 @@ public class PrisonCommand {
     public ChatDisplay displayVersion() {
     	
         ChatDisplay display = new ChatDisplay("/prison version");
-        display.addText("&7Prison Version: &3%s", Prison.get().getPlatform().getPluginVersion());
+        display.addText("&7Prison Version: %s", Prison.get().getPlatform().getPluginVersion());
 
-        display.addText("&7Running on Platform: &3%s", Prison.get().getPlatform().getClass().getName());
-        display.addText("&7Minecraft Version: &3%s", Prison.get().getMinecraftVersion());
+        display.addText("&7Running on Platform: %s", Prison.get().getPlatform().getClass().getName());
+        display.addText("&7Minecraft Version: %s", Prison.get().getMinecraftVersion());
 
         display.addText("");
         
-        display.addText("&7Commands: &2/prison");
+        display.addText("&7Commands: /prison");
         
         for ( Module module : Prison.get().getModuleManager().getModules() ) {
         	
-        	display.addText( "&7Module: &3%s&3 : %s %s", module.getName(), 
+        	display.addText( "&7Module: %s : %s %s", module.getName(), 
         			module.getStatus().getStatusText(),
         			(module.getStatus().getStatus() == ModuleStatus.Status.FAILED ? 
-        						"&d[" + module.getStatus().getMessage() + "&d]" : "")
+        						"[" + module.getStatus().getMessage() + "]" : "")
         			);
-        	display.addText( "    &7Base Commands: %s", module.getBaseCommands() );
+        	display.addText( ".   &7Base Commands: %s", module.getBaseCommands() );
         }
         
         List<String> disabledModules = Prison.get().getModuleManager().getDisabledModules();
         if ( disabledModules.size() > 0 ) {
         	display.addText( "&7Disabled Module%s:", (disabledModules.size() > 1 ? "s" : ""));
         	for ( String disabledModule : Prison.get().getModuleManager().getDisabledModules() ) {
-        		display.addText( "&a    &cDisabled Module: &7%s&a. Related commands and placeholders are non-functional. ",
+        		display.addText( ".   &cDisabled Module:&7 %s. Related commands and placeholders are non-functional. ",
         				disabledModule );
         	}
         }
@@ -243,15 +244,15 @@ public class PrisonCommand {
         IntegrationManager im = Prison.get().getIntegrationManager();
         String permissions =
         		(im.hasForType(IntegrationType.PERMISSION) ?
-                "&a" + im.getForType(IntegrationType.PERMISSION).get().getDisplayName() :
-                "&cNone");
+                " " + im.getForType(IntegrationType.PERMISSION).get().getDisplayName() :
+                "None");
 
         display.addText(Text.tab("&7Permissions: " + permissions));
 
         String economy =
         		(im.hasForType(IntegrationType.ECONOMY) ?
-                "&a" + im.getForType(IntegrationType.ECONOMY).get().getDisplayName() : 
-                "&cNone");
+                " " + im.getForType(IntegrationType.ECONOMY).get().getDisplayName() : 
+                "None");
 
         display.addText(Text.tab("&7Economy: " + economy));
         
@@ -698,25 +699,113 @@ public class PrisonCommand {
     	
     	display.addText( "&a Prison auto features provide the following options:");
     	display.addText( "&7   Auto pickup - &aUpon block break, items are placed directly in to player inventory.");
+    	display.addText( "&a     - Features for enabling XP, Durability, and Fortune are within the config file.");
     	display.addText( "&7   Auto smelt - &aItems that can be smelted will be smelted automatically.");
     	display.addText( "&7   Auto block - &aConverts ores to blocks.");
     	display.addText( "&7   Tool lore starts with: Pickup, Smelt, or Block. Only one per line." );
+    	display.addText( "&7   Tool lore names can be customize in config file, but color codes could be an issue." );
     	display.addText( "&7   Tool lore 100 percent with just name. Can have value 0.001 to 100.0 percent." );
     	display.addText( "&7   Tool lore examples: Pickup, Pickup 7.13, Smelt 55, Block 75.123" );
     	
     	display.addText( "&a To configure modify plugin/Prison/autoFeaturesConfig.yml");
     	display.addText( "&a Or better yet, you can use the &7/prison gui");
     	
+    	display.addText( "&a");
+    	display.addText( "&aPrison supports TokenEnchant's explosion based enchants.  Please see our online " +
+    			"documentation related to WorldGuard and LuckPerms with protecting mines (its near the bottom). " +
+    			"TE's configurations may not be obvious without reading the document.");
+    	display.addText( "&a");
+    	display.addText( "&aPrison also supports Crazy Enchant's explosion based enchantments too.  ");
+    	
+    	
     	List<AutoFeatures> afs = AutoFeatures.permissions.getChildren();
     	StringBuilder sb = new StringBuilder();
     	for ( AutoFeatures af : afs ) {
 			if ( sb.length() > 0 ) {
-				sb.append( " " );
+				sb.append( "  " );
 			}
 			sb.append( af.getMessage() );
 		}
     	display.addText( "&3Permissions:" );
     	display.addText( "&b   %s", sb.toString() );
+    	display.addText( "&7 NOTE: Permissions enables that feature even if disabled for mines." );
+    	display.addText( " " );
+
+    	
+    	
+    	AutoFeaturesWrapper afw = AutoFeaturesWrapper.getInstance();
+    	
+    	display.addText( "&3Selected Settings from &bplugins/Prison/autoFeaturesConfigs.yml&3:" );
+    	display.addText( "&b  Normal Drops (if auto pickup is off):" );
+    	display.addText( "&b    options.normalDrop.isProcessNormalDropsEvents:  %s", 
+    									afw.isBoolean( AutoFeatures.isProcessNormalDropsEvents ) );
+    	display.addText( "&b    options.normalDrop.isProcessTokensEnchantExplosiveEvents:  %s", 
+    									afw.isBoolean( AutoFeatures.isProcessTokensEnchantExplosiveEvents ) );
+    	display.addText( "&b    options.normalDrop.isProcessTokensEnchantExplosiveEvents:  %s", 
+    									afw.isBoolean( AutoFeatures.isProcessTokensEnchantExplosiveEvents ) );
+
+    	
+    	display.addText( "&b " );
+    	display.addText( "&b   options.general.isAutoManagerEnabled %s", 
+    									afw.isBoolean( AutoFeatures.isAutoManagerEnabled ));
+    	display.addText( "&7  NOTE: If this is enabled, then lore and perms will override the settings for " );
+    	display.addText( "&7        pickup, smelt, and block when they are turned off." );
+    	
+    	
+    	display.addText( "&b " );
+	
+    	
+    	display.addText( "&b   options.autoPickup.autoPickupEnabled %s", 
+    									afw.isBoolean( AutoFeatures.autoPickupEnabled ));
+    	
+    	display.addText( "&b   options.autoSmelt.autoSmeltEnabled %s", 
+    									afw.isBoolean( AutoFeatures.autoSmeltEnabled ));
+    	display.addText( "&b   options.autoBlock.autoBlockEnabled %s", 
+    									afw.isBoolean( AutoFeatures.autoBlockEnabled ));
+    	
+    	
+
+    	display.addText( "&b " );
+    	display.addText( "&b   options.general.isCalculateDurabilityEnabled %s", 
+    									afw.isBoolean( AutoFeatures.isCalculateDurabilityEnabled ));
+    	display.addText( "&b   options.general.isCalculateFortuneEnabled %s", 
+    									afw.isBoolean( AutoFeatures.isCalculateFortuneEnabled ));
+    	display.addText( "&b   options.general.isCalculateFortuneOnAllBlocksEnabled %s", 
+    									afw.isBoolean( AutoFeatures.isCalculateFortuneOnAllBlocksEnabled ));
+    	display.addText( "&b   options.general.isCalculateXPEnabled %s", 
+    									afw.isBoolean( AutoFeatures.isCalculateXPEnabled ));
+    	display.addText( "&b   options.general.givePlayerXPAsOrbDrops %s", 
+    									afw.isBoolean( AutoFeatures.givePlayerXPAsOrbDrops ));
+    	display.addText( "&b   options.general.maxFortuneLevel %s", 
+    									afw.getMessage( AutoFeatures.maxFortuneLevel ));
+
+    	display.addText( "&b " );
+    	display.addText( "&b   options.isProcessTokensEnchantExplosiveEvents %s", 
+    									afw.isBoolean( AutoFeatures.isProcessTokensEnchantExplosiveEvents ));
+    	display.addText( "&b   options.isProcessCrazyEnchantsBlockExplodeEvents %s", 
+    									afw.isBoolean( AutoFeatures.isProcessCrazyEnchantsBlockExplodeEvents ));
+    	display.addText( "&b   options.isProcessMcMMOBlockBreakEvents %s", 
+    									afw.isBoolean( AutoFeatures.isProcessMcMMOBlockBreakEvents ));
+    	display.addText( "&b " );
+    	
+    	
+    	display.addText( "&b " );
+    	display.addText( "&b   options.lore.isLoreEnabled %s", 
+										afw.isBoolean( AutoFeatures.isLoreEnabled ));
+    	display.addText( "&b   options.lore.loreTrackBlockBreakCount %s", 
+    									afw.isBoolean( AutoFeatures.loreTrackBlockBreakCount ));
+    	display.addText( "&b   options.lore.loreBlockBreakCountName %s", 
+    									afw.getMessage( AutoFeatures.loreBlockBreakCountName ));
+    	
+    	display.addText( "&b   options.lore.loreBlockExplosionCountName %s", 
+    									afw.getMessage( AutoFeatures.loreBlockExplosionCountName ));
+    	display.addText( "&b   options.lore.loreDurabiltyResistance %s", 
+    									afw.isBoolean( AutoFeatures.loreDurabiltyResistance ));
+    	display.addText( "&b   options.lore.loreDurabiltyResistanceName %s", 
+    									afw.getMessage( AutoFeatures.loreDurabiltyResistanceName ));
+    	display.addText( "&b " );
+    	
+    	
     	
     	display.send(sender);
     	
@@ -739,6 +828,24 @@ public class PrisonCommand {
     	String message = "Debug logging: " + (Output.get().isDebug() ? "enabled" : "disabled");
 
     	sender.sendMessage( message );
+    }
+    
+    
+    @Command(identifier = "prison findCmd", 
+    		description = "For internal use only. Do not use.  This command is used by internal code to look up " +
+    				"a command to get the registered command.  Example would be when prison is registering  the " +
+    				"command '/backpack' and it's already been registered, bukkit would then try to register prison's " +
+    				"version as '/prison:backpack'.  This information is used to ensure that internal calls go to the " +
+    				"correct prison commands instead of another plugin's.", 
+    		onlyPlayers = false, permissions = "prison.debug" )
+    public void findCommand(CommandSender sender,
+    		@Arg(name = "command", description = "The command to search for" ) String command
+    		) {
+    	
+    	String registered = Prison.get().getCommandHandler().findRegisteredCommand( command );
+    	
+    	Output.get().logInfo( "&7Prison Find Registered Command: original= &3%s  &7registered= &3%s", 
+    			command, registered );
     }
     
     

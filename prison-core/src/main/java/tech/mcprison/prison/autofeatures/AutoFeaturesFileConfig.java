@@ -35,6 +35,8 @@ public class AutoFeaturesFileConfig {
 	    	isProcessTokensEnchantExplosiveEvents(options, true),
 	    	isProcessCrazyEnchantsBlockExplodeEvents(options, true),
 	    	
+	    	isProcessMcMMOBlockBreakEvents(options, true),
+	    	
 	    	
 	    	general(options),
 	    	
@@ -44,6 +46,7 @@ public class AutoFeaturesFileConfig {
 		    	
 		    	isCalculateFortuneEnabled(general, true),
 		    	isCalculateFortuneOnAllBlocksEnabled(general, false),
+		    	maxFortuneLevel(general, 0),
 		    	
 		    	isCalculateSilkEnabled(general, true),
 		    	
@@ -73,6 +76,15 @@ public class AutoFeaturesFileConfig {
 				
 				loreDurabiltyResistance(lore, false),
 				loreDurabiltyResistanceName(lore, "&dDurability Resistance&7"),
+				
+				
+			
+			normalDrop(options),
+			
+    			isProcessNormalDropsEvents(normalDrop, true),
+    			normalDropSmelt(normalDrop, true),
+    			normalDropBlock(normalDrop, true),
+    			
 				
 	    	autoPickup(options),
 		    	autoPickupEnabled(autoPickup, true),
@@ -105,6 +117,13 @@ public class AutoFeaturesFileConfig {
 		    	
 		    	autoSmeltGoldOre(autoSmelt, true),
 		    	autoSmeltIronOre(autoSmelt, true),
+		    	autoSmeltCoalOre(autoSmelt, true),
+		    	autoSmeltDiamondlOre(autoSmelt, true),
+		    	autoSmeltEmeraldOre(autoSmelt, true),
+		    	autoSmeltLapisOre(autoSmelt, true),
+		    	autoSmeltRedstoneOre(autoSmelt, true),
+		    	autoSmeltNetherQuartzOre(autoSmelt, true),
+		    	autoSmeltAncientDebris(autoSmelt, true),
 	   
 	    	
 	    	autoBlock(options),
@@ -124,6 +143,11 @@ public class AutoFeaturesFileConfig {
 		    	autoBlockLapisBlock(autoBlock, true),
 		    	autoBlockSnowBlock(autoBlock, true),
 		    	autoBlockGlowstone(autoBlock, true),
+		    	
+	    	debug(options),
+	    		isDebugSupressOnBlockBreakEventCancels(debug, false),
+	    		isDebugSupressOnTEExplodeEventCancels(debug, false),
+	    		isDebugSupressOnCEBlastUseEventCancels(debug, false)
 
     	;
 
@@ -213,6 +237,24 @@ public class AutoFeaturesFileConfig {
     		this.message = null;
     		this.value = value == null ? Boolean.FALSE : value;
     		this.intValue = null;
+    		this.longValue = null;
+    		this.doubleValue = null;
+    		this.listValue = new ArrayList<>();
+    	}
+    	private AutoFeatures(AutoFeatures section, int value) {
+    		this.parent = section;
+    		this.isSection = false;
+    		this.isBoolean = false;
+    		this.isMessage = false;
+    		this.isInteger = true;
+    		this.isLong = false;
+    		this.isDouble = false;
+    		this.isStringList = false;
+    		
+    		this.path = section.getKey();
+    		this.message = null;
+    		this.value = null;
+    		this.intValue = value;
     		this.longValue = null;
     		this.doubleValue = null;
     		this.listValue = new ArrayList<>();
@@ -364,6 +406,21 @@ public class AutoFeaturesFileConfig {
     		}
     		
     		return results;
+    	}
+    	
+    	
+    	public int getInteger( Map<String, ValueNode> conf ) {
+    		int results = 0;
+    		
+    		if ( conf.containsKey(getKey()) && conf.get( getKey() ).isIntegerNode() ) {
+    			IntegerNode intValue = (IntegerNode) conf.get( getKey() );
+    			results = intValue.getValue();
+    		}
+    		else if ( getValue() != null ) {
+    			results = getIntValue();
+    		}
+    		
+    		return results;
     	}    	
     	
     	public List<String> getStringList( Map<String, ValueNode> conf  ) {
@@ -413,7 +470,7 @@ public class AutoFeaturesFileConfig {
     
     }
     
-    public AutoFeaturesFileConfig() {
+    protected AutoFeaturesFileConfig() {
         
     	this.config = new LinkedHashMap<>();
     	
@@ -538,6 +595,10 @@ public class AutoFeaturesFileConfig {
 	
 	public String getFeatureMessage( AutoFeatures feature ) {
 		return feature.getMessage( getConfig() );
+	}
+	
+	public int getInteger( AutoFeatures feature ) {
+		return feature.getInteger( getConfig() );
 	}
 	
 	public List<String> getFeatureStringList( AutoFeatures feature ) {

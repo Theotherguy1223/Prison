@@ -470,7 +470,7 @@ public abstract class MineScheduler
 		submitTask();
 	}
 
-
+	
 	
 	/**
 	 * <p>This function checks if the block break event should execute a 
@@ -481,34 +481,58 @@ public abstract class MineScheduler
 	 * @param blockCount
 	 * @param player 
 	 */
-	public void processBlockBreakEventCommands( int blockCount, Player player, 
-					BlockEventType eventType, String triggered ) {
+	public void processBlockBreakEventCommands( String blockName, Player player, 
+							BlockEventType eventType, String triggered ) {
 		
+		// Only one block is processed here:
 		if ( getBlockEvents().size() > 0 ) {
 			Random random = new Random();
 			
-			for ( int i = 0; i < blockCount; i ++ ) {
+			for ( MineBlockEvent blockEvent : getBlockEvents() ) {
 				double chance = random.nextDouble() * 100;
 				
-				for ( MineBlockEvent blockEvent : getBlockEvents() ) {
-					
-					processBlockEventDetails( player, eventType, chance, blockEvent, triggered );
-				}
-				
+				processBlockEventDetails( player, blockName, eventType, chance, blockEvent, triggered );
 			}
 		}
 	}
 
-	private void processBlockEventDetails( Player player, BlockEventType eventType, double chance, 
+	
+//	/**
+//	 * <p>This function checks if the block break event should execute a 
+//	 * given command or not. If it needs to, then it will submit them to run as 
+//	 * a task instead of running them in this thread.
+//	 * </p>
+//	 * 
+//	 * @param blockCount
+//	 * @param player 
+//	 */
+//	@Deprecated
+//	public void processBlockBreakEventCommands( int blockCount, Player player, 
+//							BlockEventType eventType, String triggered ) {
+//		
+//		if ( getBlockEvents().size() > 0 ) {
+//			Random random = new Random();
+//			
+//			for ( int i = 0; i < blockCount; i ++ ) {
+//				
+//				for ( MineBlockEvent blockEvent : getBlockEvents() ) {
+//					double chance = random.nextDouble() * 100;
+//					
+//					processBlockEventDetails( player, null, eventType, chance, blockEvent, triggered );
+//				}
+//				
+//			}
+//		}
+//	}
+
+	private void processBlockEventDetails( Player player, String blockName, BlockEventType eventType, 
+				double chance, 
 					MineBlockEvent blockEvent, String triggered )
 	{
-		if ( eventType == BlockEventType.TEXplosion && 
-				eventType == blockEvent.getEventType() && 
-					( blockEvent.getTriggered() == null || 
-						blockEvent.getTriggered().equalsIgnoreCase( triggered )) ||
-					
-				blockEvent.getEventType() == BlockEventType.all || 
-				blockEvent.getEventType() == eventType ) {
+
+		boolean fireEvent = blockEvent.isFireEvent( chance, eventType, blockName, triggered );
+		
+		if ( fireEvent ) {
 			
 			// If perms are set, check them, otherwise ignore perm check:
 			String perms = blockEvent.getPermission();
@@ -517,13 +541,15 @@ public abstract class MineScheduler
 					perms.trim().length() == 0
 					) {
 				
-				if ( chance <= blockEvent.getChance() ) {
+				 {
 					
-					String formatted = blockEvent.getCommand().
-							replace("{player}", player.getName())
+					String formatted = blockEvent.getCommand()
+							.replace( "{msg}", "prison utils msg {player} " )
+							.replace( "{broadcast}", "prison utils broadcast " )
+							.replace("{player}", player.getName())
 							.replace("{player_uid}", player.getUUID().toString());
 					
-					// Split multiple commands in to a List of indivual tasks:
+					// Split multiple commands in to a List of individual tasks:
 					List<String> tasks = new ArrayList<>( 
 							Arrays.asList( formatted.split( ";" ) ));
 					
